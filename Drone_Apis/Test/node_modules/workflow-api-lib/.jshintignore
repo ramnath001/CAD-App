@@ -1,0 +1,3 @@
+web/default/js/vendor
+node_modules
+coverage
