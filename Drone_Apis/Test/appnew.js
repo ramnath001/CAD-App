@@ -92,6 +92,9 @@ request({
 });
 */
 
+/* api to get all apps
+ *
+ */
 app.get('/apps', function(req, res) {
     var mkp_loc = 0;
     var ecp_loc = 0;
