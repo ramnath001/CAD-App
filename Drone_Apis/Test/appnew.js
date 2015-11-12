@@ -5,9 +5,10 @@ var workflow_api_lib = require('workflow-api-lib'),
     app = express();
 var request = require("request");
 
-/*var mongoose = require('mongoose');
-var mappingData = null;
-mongoose.connect('mongodb://localhost:27017/cad');
+var mongoose = require('mongoose');
+var mappingData;
+
+mongoose.connect('mongodb://localhost:27017/test');
 
 
 var mappingSchema = new mongoose.Schema({
@@ -24,15 +25,71 @@ var mappingSchema = new mongoose.Schema({
     }
 });
 
-var map = mongoose.model('Mapping', mappingSchema, 'CadCollection');
+var hardwareSchema = new mongoose.Schema({
+     hardware:{
+        apps:[
+          {
+
+
+            appname:{type:String},
+            inventory:{
+                 TotalMachines:{type:Number},
+                    TotalStorage:{type:Number},
+                    TotalCPU:{type:Number},
+                    TotalRAM:{type:Number}
+            }
+          
+
+        }
+     ]
+    }
+ 
+});
+
+var appsSchema =   new mongoose.Schema({
+
+     appdetails:{
+        apps:[
+          {
+            appname:{type:String},
+            applead:{type:String},
+            apptitle:{type:String},
+            coverage:{
+                 linesofcode: {type:String},
+                    blockerissues:{type:String},
+                    criticalissues: {type:String}
+                },
+            hardware:{
+                 TotalRAM: {type:Number},
+                    TotalCPU: {type:Number},
+                    TotalStorage: {type:Number},
+                    TotalMachines: {type:Number}
+                }
+          
+
+        }
+     ]
+    }
+});
+    
+
+var hardwareMap = mongoose.model('Mapping', hardwareSchema, 'test');
+var appsMap = mongoose.model('AppMapping', appsSchema, 'test');
+/*hardwareMap.findById("564260992b47fe5143646b5a",function(err,doc){
+   
+ appHardware = doc.hardware.apps;
+
+});
+console.log(appHardware);
+/*var map = mongoose.model('Mapping', mappingSchema, 'CadCollection');
 map.findById("563d4823076b2593e93ec975", function(err, doc) {
-    //console.log("doc " + JSON.stringify(doc));
-    mappingData = JSON.stringify(doc.mappingdetails);
-    //console.log(mappingData);
+   // console.log("doc " +JSON.stringify(doc);
+    mappingData = JSON.stringify(doc);
+    console.log(mappingData);
 
-});*/
+});
 //console.log(mappingData);
-
+*/
 var data;
 var mkp_loc = 0;
 var ecp_loc = 0;
@@ -52,7 +109,9 @@ var ecx_criticalissues = [];
 var ecx_blockerissues = [];
 var blockerIssuesECP = 0;
 var criticalIssuesECP = 0;
-
+var mkp_hardware = {};
+var ecp_hardware = {};
+var ecx_hardware = {};
 var sonar_rules = workflow_api_lib.createRule('/conf/rules/sonar_rules.json'),
     jenkins_rules = workflow_api_lib.createRule('/conf/rules/jenkins_rules.json'),
     jira_rules = workflow_api_lib.createRule('/conf/rules/jira_rules.json');
@@ -96,6 +155,35 @@ request({
  *
  */
 app.get('/apps', function(req, res) {
+//console.log("params " + req.params.key);
+hardwareMap.findById("56427a1fae20b9d9ce06d17e",function(err,doc){
+   var appHardware=[];
+   
+   //console.log(doc);
+ appHardware = doc.hardware.apps;
+ 
+ //console.log(appHardware[1].inventory);
+//console.log("inventory " +appHardware.inventory);
+ for(var i=0;i<appHardware.length;i++){
+  if(appHardware[i].appname === "MKP"){
+    //console.log("i ="+i);
+   // console.log(appHardware[i].inventory);
+    mkp_hardware = appHardware[i].inventory;
+   
+}
+ if(appHardware[i].appname === "ECP"){
+    ecp_hardware = appHardware[i].inventory
+}
+if(appHardware[i].appname === "ECX"){
+    ecx_hardware = appHardware[i].inventory
+}
+
+}
+console.log( mkp_hardware);
+
+
+
+
     var mkp_loc = 0;
     var ecp_loc = 0;
     var ecx_loc = 0;
@@ -122,7 +210,7 @@ app.get('/apps', function(req, res) {
             //data = res.json({codeanalysis:results, gsejira: results2});
             var dataArray = results.metrics.data;
             var jiraProjects = results2.jiraprojects.data;
-            console.log("projects " + jiraProjects);
+            
 
             var mkpindex = 0;
             var ecpindex = 0;
@@ -211,8 +299,10 @@ app.get('/apps', function(req, res) {
                     "coverage": {
                         "linesofcode": mkp_loc,
                         "blockerissues":blockerIssuesMKP,
-                        "criticalissues":criticalIssuesMKP
-                    }
+                        "criticalissues":criticalIssuesMKP,
+
+                    },
+                    "hardware":mkp_hardware
                 },
                 
                     {
@@ -223,7 +313,8 @@ app.get('/apps', function(req, res) {
                         "linesofcode": ecp_loc,
                         "blockerissues":blockerIssuesECP,
                         "criticalissues":criticalIssuesECP
-                    }
+                    },
+                    "hardware":ecp_hardware
                 },
                     {
                     "appname": "ECX",
@@ -233,7 +324,8 @@ app.get('/apps', function(req, res) {
                         "linesofcode": ecx_loc,
                         "blockerissues":blockerIssuesECX,
                         "criticalissues":criticalIssuesECX
-                    }
+                    },
+                    "hardware":ecx_hardware
 
                 });
                
@@ -248,16 +340,38 @@ app.get('/apps', function(req, res) {
                     apps: obj
                 }
             };
-            // console.log("appjson " +JSON.stringify({appdetails:{
+             //console.log("params " + req.params.key);
             // apps:obj}}));
-            res.json(finalobj);
+            //if(req.params.key == undefined)
+               res.json(finalobj);
+           
+        
 
-        });
+        }); //jira api
 
-    });
+    }); //sonar api
+});// mongoose api
+});// apps api
+
+
+app.get('/apps/:key', function(req,res){
+    appsMap.findById("5643a3be59aa1db9395f52ea",function(err,doc){
+        //if(req.params.key == "MKP")
+          var apps = doc.appdetails.apps;
+          for(var i = 0;i<apps.length;i++)
+          {
+            if(apps[i].appname == req.params.key)
+                res.json({appdetails:{apps:apps[i]}});
+          }
+       });
 });
 
+
+
+
+
 app.get('/projects', function(req, res) {
+    console.log(finalobj);
     jira_rules.init({
         host: "gsejira.corp.equinix.com",
         port: 80,
@@ -294,6 +408,8 @@ app.get('/combined', function(req, res) {
         });
     });
 });
+
+
 
 app.get('/profiles', function(req, res) {
     sonar_rules.init({
